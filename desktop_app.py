@@ -16,27 +16,22 @@ class WindowButton(QToolButton):
     def __init__(self, titleBar: QWidget, normal, hover, pressed):
         super().__init__(titleBar)
 
-        # self.normal_icon = QIcon(normal)
-        # self.hover_icon = QIcon(hover)
-        # self.pressed_icon = QIcon(pressed)
-        self.icon = QIcon()
-        self.icon.addFile(normal, QSize(), QIcon.Mode.Normal)
-        self.icon.addFile(hover, QSize(), QIcon.Mode.Active)
-        self.icon.addFile(pressed, QSize(), QIcon.Mode.Selected)
-        self.setIcon(self.icon)
+        self.normal_icon = QIcon(normal)
+        self.hover_icon = QIcon(hover)
+        self.pressed_icon = QIcon(pressed)
+        self.setIcon(self.normal_icon)
 
-    # def enterEvent(self, event):
-    #     self.setIcon(self.icon)
-    #     super().enterEvent(event)
+    def enterEvent(self, event):
+        self.setIcon(self.hover_icon)
+        super().enterEvent(event)
 
-    # def leaveEvent(self, event):
-    #     print("Mouse left the button")
-    #     super().leaveEvent(event)
+    def leaveEvent(self, event):
+        self.setIcon(self.normal_icon)
+        super().leaveEvent(event)
 
-    # def mousePressEvent(self, event):
-    #     print("Button was pressed down")
-    #     # This keeps the default clicking behavior alive
-    #     super().mousePressEvent(event)
+    def mousePressEvent(self, event):
+        self.setIcon(self.pressed_icon)
+        super().mousePressEvent(event)
 
 
 
@@ -70,7 +65,7 @@ class CustomTitleBar(QWidget):
         # min_icon.addFile("icons\\min_hover.png", QSize(), QIcon.Mode.Active)
         # min_icon.addFile("icons\\min_pressed.png", QSize(), QIcon.Mode.Disabled)
         # self.min_button.setIcon(min_icon)
-        self.min_button = WindowButton(self, "icons\\min.svg", "icons\\min_hover.png", "icons\\min_pressed.png")
+        self.min_button = WindowButton(self, "icons\\min.svg", "icons\\min_hover.svg", "icons\\min_pressed.svg")
         self.min_button.clicked.connect(self.window().showMinimized)
 
         # Max button
@@ -78,7 +73,7 @@ class CustomTitleBar(QWidget):
         # max_icon = QIcon()
         # max_icon.addFile("icons\\max.svg")
         # self.max_button.setIcon(max_icon)
-        self.max_button = WindowButton(self, "icons\\max.svg", "icons\\max_hover.png", "icons\\max_pressed.png")
+        self.max_button = WindowButton(self, "icons\\max.svg", "icons\\max_hover.svg", "icons\\max_pressed.svg")
         self.max_button.clicked.connect(self.window().showMaximized)
 
         # Close button
@@ -86,7 +81,7 @@ class CustomTitleBar(QWidget):
         # close_icon = QIcon()
         # close_icon.addFile("icons\\close.svg")  # Close has only a single state.
         # self.close_button.setIcon(close_icon)
-        self.close_button = WindowButton(self, "icons\\close.svg", "icons\\close_hover.png", "icons\\close_pressed.png")
+        self.close_button = WindowButton(self, "icons\\close.svg", "icons\\close_hover.svg", "icons\\close_pressed.svg")
         self.close_button.clicked.connect(self.window().close)
 
         # Normal button
@@ -94,7 +89,7 @@ class CustomTitleBar(QWidget):
         # normal_icon = QIcon()
         # normal_icon.addFile("icons\\max.svg")
         # self.normal_button.setIcon(normal_icon)
-        self.normal_button = WindowButton(self, "icons\\max.svg", "icons\\max_hover.png", "icons\\max_pressed.png")
+        self.normal_button = WindowButton(self, "icons\\max.svg", "icons\\max_hover.svg", "icons\\max_pressed.svg")
         self.normal_button.clicked.connect(self.window().showNormal)
         self.normal_button.setVisible(False)
         # Add buttons
