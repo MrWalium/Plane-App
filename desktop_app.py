@@ -218,6 +218,9 @@ class MainWindow(QMainWindow):
         super().mousePressEvent(event)
 
     def updateCursor(self, pos):
+        if self.title_bar.geometry().contains(pos):
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+            return
         if not self.isFullScreen():
             edge = self.getEdge(pos)
             corner = self.getCorner(pos)
