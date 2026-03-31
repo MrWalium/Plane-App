@@ -40,12 +40,13 @@ class WindowButton(QToolButton):
 
 
 class CustomTitleBar(QWidget):
-    def __init__(self, parent, button_size, if_title):
+    def __init__(self, parent, button_size, if_title, change_cursor):
         super().__init__(parent)
         self.initial_pos = None
         title_bar_layout = QHBoxLayout(self)
         title_bar_layout.setContentsMargins(13, 7, 7, 10)
         title_bar_layout.setSpacing(2)
+        self.change_cursor = change_cursor
         if(if_title):
             self.title = QLabel(f"{self.__class__.__name__}", self)
             self.title.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -77,7 +78,7 @@ class CustomTitleBar(QWidget):
         self.close_button = WindowButton(self, "icons\\close.svg", "icons\\close_hover.svg", "icons\\close_pressed.svg")
 
         # Normal button
-        self.normal_button = WindowButton(self, "icons\\max.svg", "icons\\max_hover.svg", "icons\\max_pressed.svg")
+        self.normal_button = WindowButton(self, "icons\\max.svg", "icons\\normal_hover.svg", "icons\\normal_pressed.svg")
         # self.normal_button = WindowButton(self, "icons\\close.svg", "icons\\close_hover.svg", "icons\\close_pressed.svg")
         self.normal_button.setVisible(False)
 
@@ -110,11 +111,12 @@ class CustomTitleBar(QWidget):
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.initial_pos = event.position().toPoint()
+            if self.change_cursor: self.setCursor(Qt.CursorShape.SizeAllCursor)
         super().mousePressEvent(event)
         event.accept()
 
     def mouseMoveEvent(self, event):
-        if self.initial_pos is not None:
+        if not self.is_max and self.initial_pos is not None:
             delta = event.position().toPoint() - self.initial_pos
             self.window().move(
                 self.window().x() + delta.x(),
@@ -125,6 +127,8 @@ class CustomTitleBar(QWidget):
 
     def mouseReleaseEvent(self, event):
         self.initial_pos = None
+        if self.change_cursor and event.button() == Qt.MouseButton.LeftButton:
+            self.setCursor(Qt.CursorShape.ArrowCursor)
         super().mouseReleaseEvent(event)
         event.accept()
     
@@ -165,7 +169,7 @@ class MainWindow(QMainWindow):
                 }
             """
         )
-        self.title_bar = CustomTitleBar(self, 18, False)
+        self.title_bar = CustomTitleBar(self, 18, False, False)
 
         work_space_layout = QHBoxLayout()
         work_space_layout.setContentsMargins(11, 11, 11, 11)
@@ -181,6 +185,11 @@ class MainWindow(QMainWindow):
 
         central_widget.setLayout(centra_widget_layout)
         self.setCentralWidget(central_widget)
+
+        self.setMouseTracking(True)
+        central_widget.setMouseTracking(True)
+        self.side_resize_margin = 8
+        self.corner_resize_margin = 10
     
     def setNormal(self):
         self.resize(QSize(int(self.firstMonitor.width/2), int(self.firstMonitor.height/2)))
@@ -197,6 +206,87 @@ class MainWindow(QMainWindow):
                     self.showNormal()
         super().changeEvent(event)
         event.accept()
+    
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton and not self.isFullScreen():
+            edge = self.getEdge(event.position().toPoint())
+            corner = self.getCorner(event.position().toPoint())
+            if corner:
+                self.windowHandle().startSystemResize(self.cornerToEdges(corner))
+            if edge:
+                self.windowHandle().startSystemResize(edge)
+        super().mousePressEvent(event)
+
+    def updateCursor(self, pos):
+        if not self.isFullScreen():
+            edge = self.getEdge(pos)
+            corner = self.getCorner(pos)
+            if corner == Qt.Corner.BottomRightCorner or corner == Qt.Corner.TopLeftCorner:
+                self.setCursor(Qt.CursorShape.SizeFDiagCursor)
+            elif corner == Qt.Corner.BottomLeftCorner or corner == Qt.Corner.TopRightCorner:
+                self.setCursor(Qt.CursorShape.SizeBDiagCursor)
+            elif edge == Qt.Edge.RightEdge or edge == Qt.Edge.LeftEdge:
+                self.setCursor(Qt.CursorShape.SizeHorCursor)
+            elif edge == Qt.Edge.BottomEdge:
+                self.setCursor(Qt.CursorShape.SizeVerCursor)
+            else:
+                self.setCursor(Qt.CursorShape.ArrowCursor)
+        
+    def mouseMoveEvent(self, event):
+        self.updateCursor(event.position().toPoint())
+        super().mouseMoveEvent(event)
+    
+    def mouseReleaseEvent(self, event):
+        self.updateCursor(event.position().toPoint())
+        super().mouseReleaseEvent(event)
+    
+
+    def getEdge(self, pos):
+        """ Helper to determine which edge the mouse is over """
+        rect = self.rect()
+        edge = None
+        
+        if pos.x() >= rect.width() - self.side_resize_margin:
+            edge = Qt.Edge.RightEdge
+        elif pos.x() <= self.side_resize_margin:
+            edge = Qt.Edge.LeftEdge
+        elif pos.y() >= rect.height() - self.side_resize_margin:
+            edge = Qt.Edge.BottomEdge
+        elif pos.y() <= self.side_resize_margin:
+            edge = Qt.Edge.TopEdge
+            
+        return edge
+    
+    def getCorner(self, pos):
+        rect = self.rect()
+        corner = None
+
+        if pos.x() >= rect.width() - self.corner_resize_margin and pos.y() >= rect.height() - self.corner_resize_margin:
+            corner = Qt.Corner.BottomRightCorner
+        elif pos.x() <= self.corner_resize_margin and pos.y() >= rect.height() - self.corner_resize_margin:
+            corner = Qt.Corner.BottomLeftCorner
+        elif pos.x() >= rect.width() - self.corner_resize_margin and pos.y() <= self.corner_resize_margin:
+            corner = Qt.Corner.TopRightCorner
+        elif pos.x() <= self.corner_resize_margin and pos.y() <= self.corner_resize_margin:
+            corner = Qt.Corner.TopLeftCorner
+        
+        return corner
+    
+    def cornerToEdges(self, corner):
+        edges = None
+
+        if corner == Qt.Corner.TopRightCorner:
+            edges = Qt.Edge.RightEdge | Qt.Edge.TopEdge
+        elif corner == Qt.Corner.TopLeftCorner:
+            edges = Qt.Edge.LeftEdge | Qt.Edge.TopEdge
+        elif corner == Qt.Corner.BottomLeftCorner:
+            edges = Qt.Edge.LeftEdge | Qt.Edge.BottomEdge
+        elif corner == Qt.Corner.BottomRightCorner:
+            edges = Qt.Edge.RightEdge | Qt.Edge.BottomEdge
+        
+        return edges
+
+
 
 app = QApplication([])
 
